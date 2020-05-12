@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Challenge 1</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: sans-serif;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        body {
+            background-color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        .input {
+            width: 60%;
+            margin: 100px auto;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid black;
+            justify-content: center;
+            align-items: center;
+            background-color: whitesmoke;
+        }
+        .input input {
+            width: 400px;
+            height: 32px;
+            margin: 60px auto;
+            outline: none;
+            border: 1px solid #3868FF;
+            border-radius: 16px;
+            text-align: center;
+            transition: .2s;
+        }
+        .input input:focus {
+            box-shadow: 0 0 4px #3868FF;
+        }
+        .input button {
+            margin-bottom: 20px;
+            width: 120px;
+            height: 32px;
+            outline: none;
+            border: 1px solid #3868FF;
+            border-radius: 16px;
+            cursor: pointer;
+            background-color: #056CF2;
+            transition: .2s;
+            color: white;
+        }
+        .input button:hover {
+            box-shadow: 0 0 4px #056CF2;
+        }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            $('#check').click(function () {
+                let flag = $('#flag').val();
+                if (flag.length != 8)
+                    alert('invalid flag');
+                else {
+                    let i = 0, s, p, ss='';
+                    for (; i<8; i++) {
+                        s = sig(flag[i]);
+                        p = ((i%2) ? s[Math.floor(i/2)]>>>16
+                                :s[Math.floor(i/2)]&0xffff).toString(16);
+                        ss += p.substr(2) + p.substr(0,2);
+                    }
+                    alert(`${(ss == '9dd490766a3f80620dcc8fd9f2a72543')
+                                ?'valid':'invalid'} flag`);
+                }
+            });
+        });
+        function sig(data) {
+            let r = [
+                7, 12, 17, 22,  7, 12, 17, 22,  7, 12, 17, 22,  7, 12, 17, 22,
+                5,  9, 14, 20,  5,  9, 14, 20,  5,  9, 14, 20,  5,  9, 14, 20,
+                4, 11, 16, 23,  4, 11, 16, 23,  4, 11, 16, 23,  4, 11, 16, 23,
+                6, 10, 15, 21,  6, 10, 15, 21,  6, 10, 15, 21,  6, 10, 15, 21
+            ];
+            let k = [];
+            for (var i=0; i<64; i++)
+                k.push(Math.floor(Math.abs(Math.sin(i+1)) * Math.pow(2, 32)));
+            let h0=0x67452301, h1=0xEFCDAB89, h2=0x98BADCFE, h3=0x10325476;
+            let buffArray = [];
+            for (i=0; i<data.length; i++)
+                buffArray.push(data.charCodeAt(i));
+            buffArray.push(128);
+            let size = data.length;
+            size *= 8;
+            for (size += 8; size % 512 != 448; size += 8);
+            size /= 8;
+            for (i=data.length+1; i<size; i++)
+                buffArray.push(0);
+            for (i=0; i<8; i++) {
+                if (i < 4)
+                    buffArray.push(((data.length * 8) & ( -1 + (1 << (8 * (i+1))))) >> (8 * (i)));
+                else
+                    buffArray.push(0);
+            }
+            size += 8;
+            let w = undefined, sb=undefined;
+            for (i=0; i<16; i++)
+            for (i=0; i<size; i+=64) {
+                let a=h0, b=h1, c=h2, d=h3;
+                let e=0, f=0, g=0, tmp=0, j=0;
+                sb = buffArray.slice(i, i+64);
+                w = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+                for (j=0; j<64; j++) {
+                    e = Math.floor(j/4);
+                    f = j % 4;
+                    w[e] |= (sb[j] << (8 * f));
+                }
+                for (j=0; j<64; j++) {
+                    if (j<16) {
+                        f=(b & c) | ((~b) & d);
+                        g=j;
+                    }
+                    else if (j<32) {
+                        f=(d & b) | ((~d) & c);
+                        g=(5*j+1)%16;
+                    }
+                    else if (j<48) {
+                        f=b ^ c ^ d;
+                        g=(3*j+5)%16;
+                    }
+                    else {
+                        f=c ^ (b | (~d));
+                        g=(7*j)%16;
+                    }
+                    f >>>= 0;
+                    tmp = d;
+                    d = c;
+                    c = b;
+                    b += ((a+f+k[j]+w[g]) << r[j]) | ((a+f+k[j]+w[g]) >>> (32-r[j]));
+                    b >>>= 0;
+                    a = tmp;
+                }
+                h0 = (h0 + a) >>> 0;
+                h1 = (h1 + b) >>> 0;
+                h2 = (h2 + c) >>> 0;
+                h3 = (h3 + d) >>> 0;
+            }
+            return [h0, h1, h2, h3];
+        }
+    </script>
+</head>
+<body>
+    <div class="input">
+        <input type="text" id="flag">
+        <button id="check">Check</button>
+    </div>
+</body>
+</html>
